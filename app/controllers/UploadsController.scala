@@ -9,6 +9,7 @@ import javax.inject.Inject
 import models.{ContainersModel, UploadRequestsModel, UploadsModel}
 import pdi.jwt.JwtPlayImplicits
 import play.api.Configuration
+import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.Json
 import play.api.mvc.{AbstractController, ControllerComponents}
 import services.{FileHandlingService, JWTService}
@@ -29,10 +30,19 @@ class UploadsController @Inject()(cc: ControllerComponents, uploads: UploadsMode
     GET /files/:app/:container
     GET /files/:app/:container/:user <!-- always allowed for an user / allowed for others -->
    */
+  def uploadFileFormData(ticket: String) = authorize.optional().async(parse.multipartFormData) { rq =>
+    rq.body.files.headOption match {
+      case Some(file) => doUploadFile(ticket, file.ref, rq)
+      case None => Future.successful(BadRequest(Json.toJson(APIResponse("no_file", "The request doesn't contain any file."))))
+    }
+  }
 
   def uploadFile(ticket: String) = authorize.optional().async(parse.temporaryFile) { rq =>
+    doUploadFile(ticket, rq.body, rq)
+  }
+
+  private def doUploadFile(ticket: String, file: TemporaryFile, rq: authorize.OptionalAuthorizedRequest[_]) = {
     val user = rq.principal
-    val file = rq.body
 
     uploadRequests.getRequest(ticket) flatMap {
       case Some(request) if request.uploadId.isEmpty =>
@@ -49,7 +59,6 @@ class UploadsController @Inject()(cc: ControllerComponents, uploads: UploadsMode
         else {
           containers.getContainer(request.containerId).flatMap { container =>
             // We have permission, let's move the file
-            println("Starting new image upload... " + rq.contentType + " - " + file.path)
 
             val mime = files.getMime(file)
             val size = Files.size(file.path)
