@@ -40,5 +40,6 @@ lazy val root = (project in file("."))
       "-deprecation"
     )
   )
+  .aggregate(api)
   .dependsOn(api)
 
