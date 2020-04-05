@@ -1,6 +1,6 @@
 import sbt.Keys.{libraryDependencies, resolvers}
 
-ThisBuild / organization := "ch.japan-impact"
+ThisBuild / organization := "ch.japanimpact"
 ThisBuild / version      := "1.0-SNAPSHOT"
 ThisBuild / scalaVersion := "2.13.1"
 ThisBuild / libraryDependencies ++= Seq(

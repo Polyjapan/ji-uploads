@@ -28,7 +28,7 @@ package object uploads {
   case class UploadStatusResponse(uploaded: Boolean, upload: Option[Upload])
 
 
-  case class UploadRequest(uploader: Option[Principal], replacement: ReplacementPolicy.Value, replaceId: Option[Int])
+  case class UploadRequest(uploader: Option[Principal] = None, replacement: ReplacementPolicy.Value = ReplacementPolicy.NoReplace, replaceId: Option[Int] = None)
 
 
   case class APIResponse(success: Boolean, error: Option[String] = None, errorMessage: Option[String] = None,
@@ -47,10 +47,10 @@ package object uploads {
 
   implicit val ContainerFormat: Format[Container] = Json.format[Container]
   implicit val SimpleContainerFormat: Format[SimpleContainer] = Json.format[SimpleContainer]
-  implicit val UploadFormat: Writes[Upload] = Json.writes[Upload]
-  implicit val UploadStatusResponseFormat: Writes[UploadStatusResponse] = Json.writes[UploadStatusResponse]
+  implicit val UploadFormat: Format[Upload] = Json.format[Upload]
+  implicit val UploadStatusResponseFormat: Format[UploadStatusResponse] = Json.format[UploadStatusResponse]
   implicit val ReplacementPolicyFormat: Format[ReplacementPolicy.Value] = Json.formatEnum(ReplacementPolicy)
-  implicit val UploadRequestFormat: Reads[UploadRequest] = Json.reads[UploadRequest]
+  implicit val UploadRequestFormat: Format[UploadRequest] = Json.format[UploadRequest]
   implicit val APIResponseFormat: Format[APIResponse] = Json.format[APIResponse]
   implicit val DelegationRequestFormat: Format[DelegationRequest] = Json.format[DelegationRequest]
 }
