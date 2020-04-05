@@ -1,0 +1,25 @@
+
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
++nocsrf
+PUT        /files/:ticket                           controllers.UploadsController.uploadFile(ticket: String)
+GET        /files/:app/:container                   controllers.UploadsController.getFiles(app: Int, container: String)
+GET        /files/:app/:container/:principal        controllers.UploadsController.getUserFiles(app: Int, container: String, principal: String)
+
+
+GET        /uploadRequests/:ticket                  controllers.UploadRequestsController.uploadRequestStatus(ticket: String)
++nocsrf
+POST        /files/:app/:container                  controllers.UploadRequestsController.startUpload(app: Int, container: String)
+
+GET        /delegate/files/:app/:container          controllers.DelegationController.getTicketForUser(app: Int, container: String, user: Option[String])
+
++nocsrf
+POST        /containers/:app                        controllers.ContainersController.createContainer(app: Int)
++nocsrf
+PUT        /containers/:app/:container              controllers.ContainersController.updateContainer(app: Int, container: String)
++nocsrf
+DELETE        /containers/:app/:container           controllers.ContainersController.deleteContainer(app: Int, container: String)
+GET        /containers/:app/:container              controllers.ContainersController.getContainer(app: Int, container: String)
+GET        /containers/:app                         controllers.ContainersController.getContainers(app: Int)
