@@ -2,7 +2,7 @@ package ch.japanimpact.api.uploads
 
 import ch.japanimpact.api.uploads.uploads.{APIResponse, Container, DelegationRequest, Upload, UploadStatusResponse}
 import ch.japanimpact.auth.api.apitokens.{APITokensService, AppTokenRequest, Principal}
-import javax.inject.Singleton
+import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.ws._
@@ -15,7 +15,7 @@ import scala.concurrent.{ExecutionContext, Future}
  * @author Louis Vialar
  */
 @Singleton
-class UploadsService(ws: WSClient, config: Configuration, tokens: APITokensService)(implicit ec: ExecutionContext) {
+class UploadsService @Inject()(ws: WSClient, config: Configuration, tokens: APITokensService)(implicit ec: ExecutionContext) {
   private val apiBase = config.get[String]("uploads.baseUrl")
 
   private val token = new TokenHolder
