@@ -7,11 +7,12 @@ import javax.inject.Inject
 import models.ContainersModel
 import play.api.libs.json.{JsNumber, Json}
 import play.api.mvc.{AbstractController, ControllerComponents}
+import services.FileHandlingService
 import utils.AuthUtils._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class ContainersController @Inject()(cc: ControllerComponents, containers: ContainersModel, authorize: AuthorizationActions)
+class ContainersController @Inject()(cc: ControllerComponents, containers: ContainersModel, authorize: AuthorizationActions, files: FileHandlingService)
                                     (implicit ec: ExecutionContext) extends AbstractController(cc) {
 
 
@@ -47,10 +48,18 @@ class ContainersController @Inject()(cc: ControllerComponents, containers: Conta
       }
   }
 
-  def deleteContainer(app: Int, name: String) = authorize(OnlyApps, computeScopes("uploads/containers/:app/update", app, name)).async { req =>
-    // TODO: MUST delete ALL uploads from that container and then remove the container
-
-    ???
+  def deleteContainer(app: Int, name: String) = authorize(OnlyApps, computeScopes("uploads/containers/:app/delete", app, name)).async { req =>
+    containers.getContainerId(app, name).flatMap {
+      case Some(cid) =>
+        containers.deleteContainer(cid).map {
+          case true =>
+            files.deleteContainer(cid)
+            Ok(Json.toJson(APIResponse(success = true)))
+          case _ =>
+            InternalServerError(Json.toJson(APIResponse("sql_error", "The DELETE request failed")))
+        }
+      case _ => Future.successful(NotFound(Json.toJson(APIResponse("not_found", "Cannot delete this container. Are you sure it exists?"))))
+    }
   }
 
   def getContainer(app: Int, name: String) = authorize(OnlyApps, computeScopes("uploads/containers/:app/get", app, name)).async {

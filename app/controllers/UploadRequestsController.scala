@@ -27,7 +27,7 @@ class UploadRequestsController @Inject()(cc: ControllerComponents, uploads: Uplo
     val app = req.principal
     uploadRequests.getUploadIdContainerAndAppId(ticket).flatMap {
       case Some((uploadId, container, appId)) =>
-        if (!app.hasScope(AuthUtils.computeScope("uploads/containers/:app/uploadStatus", appId, container)(app.principal))) {
+        if (!app.hasScope(AuthUtils.computeScope("uploads/requests/:app/status", appId, container)(app.principal))) {
           Future.successful(NotFound(Json.toJson(APIResponse("not_found", "The given upload request doesn't exist."))))
         } else if (uploadId.isEmpty) {
           Future.successful(Ok(Json.toJson(UploadStatusResponse(false, None))))
@@ -35,7 +35,7 @@ class UploadRequestsController @Inject()(cc: ControllerComponents, uploads: Uplo
           uploadRequests.deleteRequest(ticket).flatMap(_ =>
             uploads.getUpload(uploadId.get) map {
               case Some(upload) =>
-                Ok(Json.toJson(UploadStatusResponse(true, Some(upload))))
+                Ok(Json.toJson(UploadStatusResponse(true, Some(files.setUrlInUpload(upload)))))
               case None =>
                 Ok(Json.toJson(UploadStatusResponse(false, None)))
             }
@@ -45,7 +45,7 @@ class UploadRequestsController @Inject()(cc: ControllerComponents, uploads: Uplo
     }
   }
 
-  def startUpload(app: Int, container: String) = authorize(OnlyApps, computeScopes("uploads/containers/:app/upload", app, container)).async(parse.json[UploadRequest]) { req =>
+  def startUpload(app: Int, container: String) = authorize(OnlyApps, computeScopes("uploads/requests/:app/new", app, container)).async(parse.json[UploadRequest]) { req =>
     val request = req.body
 
     // Find the container

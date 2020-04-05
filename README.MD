@@ -33,9 +33,9 @@ Note: a principal can either be an App (or _ApiKey_), or a User. The principal i
 
 #### Scopes
 
-If you are uploading to one of your containers (`appId` == to the app id in your auth token), you need the `uploads/containers/self/upload` scope.
+If you are uploading to one of your containers (`appId` == to the app id in your auth token), you need the `uploads/requests/self/new` scope.
 
-If you are uploading to the container of an other app, you need the `uploads/containers/:appId/upload/:containerName` scope.
+If you are uploading to the container of an other app, you need the `uploads/requests/:appId/new/:containerName` scope.
 
 #### Response
 
@@ -93,9 +93,9 @@ The ticket can only be used once. It is removed after the first successful use.
 #### Scopes
 
 
-If you are uploading to one of your containers (`appId` == to the app id in your auth token), you need the `uploads/containers/self/uploadStatus` scope.
+If you are uploading to one of your containers (`appId` == to the app id in your auth token), you need the `uploads/requests/self/status` scope.
 
-If you are uploading to the container of an other app, you need the `uploads/containers/:appId/uploadStatus/:containerName` scope.
+If you are uploading to the container of an other app, you need the `uploads/requests/:appId/status/:containerName` scope.
 
 #### Response
 
@@ -149,7 +149,7 @@ If everything goes well, you'll receive the following response:
     "url": "the absolute url of the binary content of the file",
     "mimeType": "the mime of the file",
     "sizeBytes": 12344
-}, ...}
+}, ...]
 ```
 
 If there is an error, you'll receive this (with a non 200 result code):
@@ -162,15 +162,29 @@ If there is an error, you'll receive this (with a non 200 result code):
 
 You can provide tokens for users to list the files in one of your containers for a limited period of time (48 hours).
 
-The endpoint is `GET /delegate/files/:app/:container`.
+The endpoint is `POST /delegation`.
 
+The body should be
+
+```json
+{
+  "principal": "<optional: the principal that will be able to use the token>",
+  "appId": 12345,
+  "containers": ["container1", "container2"]
+}
+```
+
+Where `appId` is the id of the app to which all the `containers` belong.
+ 
 The token is returned in the `Session` header and MUST be sent in this header as well.
 
 #### Scopes
 
-If you are delegating read to one of your containers (`appId` == to the app id in your auth token), you need the `uploads/containers/self/lost` scope.
+_For each delegated container, you need:_
 
-If you are delegating read to the container of an other app, you need the `uploads/containers/:appId/list/:containerName` scope.
+If you are delegating read to one of your containers (`appId` == to the app id in your auth token), you need the `uploads/files/self/lost` scope.
+
+If you are delegating read to the container of an other app, you need the `uploads/files/:appId/list/:containerName` scope.
 
 #### Response
 

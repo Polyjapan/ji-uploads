@@ -35,7 +35,7 @@ class UploadsController @Inject()(cc: ControllerComponents, uploads: UploadsMode
     val file = rq.body
 
     uploadRequests.getRequest(ticket) flatMap {
-      case Some(request) if request.uploaderId.isEmpty =>
+      case Some(request) if request.uploadId.isEmpty =>
         // Check upload right
         val uploader = (request.uploaderType zip request.uploaderId).map { case (tpe, id) => Principal.fromName(tpe)(id) }
 
@@ -62,7 +62,7 @@ class UploadsController @Inject()(cc: ControllerComponents, uploads: UploadsMode
               println("Error: invalid file size " + size + ". Returning 400.")
               Future.successful(BadRequest(Json.toJson(APIResponse("file_too_big", "The file is too big. Maximal size: " + container.maxFileSizeBytes))))
             } else {
-              val fileName = files.saveFile(file, container.allowedTypes(mime))
+              val fileName = files.saveFile(container.containerId.get, file, container.allowedTypes(mime))
 
               val replace = {
                 // TODO: delete these files as well
@@ -76,14 +76,16 @@ class UploadsController @Inject()(cc: ControllerComponents, uploads: UploadsMode
               replace.flatMap(_ => uploads.createUpload(request.containerId, user.map(_.principal), fileName, mime, size).flatMap(uploadId => {
                 uploadRequests.setUploadId(request.requestId.get, uploadId).map { _ =>
                   Ok(Json.toJson(APIResponse(Json.obj(
-                    "ticket" -> ticket, "url" -> files.getUrl(fileName)
+                    "ticket" -> ticket, "url" -> files.getUrl(container.containerId.get, fileName)
                   ))))
                 }
               }))
             }
           }
         }
-      case None =>
+      case Some(_) =>
+        Future.successful(NotFound(Json.toJson(APIResponse("already_used", "The upload ticket was already used."))))
+      case _ =>
         Future.successful(NotFound(Json.toJson(APIResponse("not_found", "The upload ticket was not found."))))
     }
   }
@@ -91,7 +93,9 @@ class UploadsController @Inject()(cc: ControllerComponents, uploads: UploadsMode
   import authorize.OptionalAuthorizedRequest
 
   private def isAuthorized(app: Int, container: String, req: OptionalAuthorizedRequest[_]): Boolean = {
-    val scope: Principal => String = AuthUtils.computeScope("uploads/containers/:app/list", app, container)
+    val scope: Principal => String = AuthUtils.computeScope("uploads/files/:app/list", app, container)
+
+    import ch.japanimpact.auth.api.apitokens.App
 
     if (req.principal.exists(p => p.principal.isInstanceOf[App] && p.hasScope(scope(p.principal)))) true
     else {

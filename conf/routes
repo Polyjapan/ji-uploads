@@ -13,7 +13,8 @@ GET        /uploadRequests/:ticket                  controllers.UploadRequestsCo
 +nocsrf
 POST        /files/:app/:container                  controllers.UploadRequestsController.startUpload(app: Int, container: String)
 
-GET        /delegate/files/:app/:container          controllers.DelegationController.getTicketForUser(app: Int, container: String, user: Option[String])
++nocsrf
+POST        /delegation                             controllers.DelegationController.getTicketForUser
 
 +nocsrf
 POST        /containers/:app                        controllers.ContainersController.createContainer(app: Int)

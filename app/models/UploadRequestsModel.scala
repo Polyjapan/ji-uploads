@@ -32,7 +32,7 @@ class UploadRequestsModel @Inject()(dbApi: play.api.db.DBApi)(implicit ec: Execu
     })
 
   // Note: it's intentional not to store the app who requested the upload, so that apps can forward those between them if they want
-  case class UploadRequest(requestId: Option[Int], ticket: String, containerId: Int,
+  case class UploadRequest(requestId: Option[Int], requestTicket: String, containerId: Int,
                            uploaderType: Option[String], uploaderId: Option[Int], replacementPolicy: ReplacementPolicy.Value,
                            replaceUpload: Option[Int], uploadId: Option[Int])
 
