@@ -1,6 +1,6 @@
 package models
 
-import java.sql.Connection
+import java.sql.{Connection, SQLException}
 
 import anorm._
 import anorm.SqlParser._
@@ -61,8 +61,14 @@ class ContainersModel @Inject()(dbApi: play.api.db.DBApi)(implicit ec: Execution
   })
 
   def deleteContainer(container: Int): Future[Boolean] = Future(db.withConnection { implicit c =>
-    SQL"DELETE FROM containers WHERE container_id = $container"
-      .execute()
+    try {
+      SQL"DELETE FROM containers WHERE container_id = $container"
+        .execute()
+
+      true
+    } catch {
+      case _: SQLException => false
+    }
   })
 
   private def enrichContainer(container: SimpleContainer)(implicit c: Connection): Container = {
