@@ -1,6 +1,7 @@
 package services
 
 import java.io.InputStreamReader
+import java.nio.file.attribute.PosixFilePermissions
 import java.nio.file.{Files, Path, Paths}
 import java.util.{Comparator, Scanner}
 
@@ -64,6 +65,8 @@ class FileHandlingService @Inject()(configuration: Configuration) {
     if (!Files.exists(path)) Files.createDirectories(path)
 
     file.moveTo(path, replace = true)
+
+    Files.setPosixFilePermissions(path, PosixFilePermissions.fromString("rw-r--r--"))
 
     fileName
   }
