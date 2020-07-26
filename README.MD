@@ -56,8 +56,9 @@ them to upload.
 
 ### 2. Upload the file
 
-Simply do a `PUT` to `/files/:uploadTicket`.
-The file should be directly in the body (no multipart/form-data).
+Simply do a `PUT` to `/files/:uploadTicket`. The file should be directly in the body (no multipart/form-data).
+
+You can also do a multipart/form-data upload by POSTing the same endpoint (`POST /files/:uploadTicket`).
 
 
 #### Scopes
