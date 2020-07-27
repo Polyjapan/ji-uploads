@@ -4,7 +4,7 @@ info:
   version: "1.0.0"
   title: "JI Uploads"
 servers:
- - url: "https://api.japan-impact.ch/uploads"
+  - url: "https://api.japan-impact.ch/uploads"
 tags:
   - name: "containers"
     description: "Management of file containers"
@@ -93,7 +93,7 @@ paths:
               schema:
                 allOf:
                   - type: "object"
-                    properties: 
+                    properties:
                       success:
                         type: boolean
                       data:
@@ -108,7 +108,7 @@ paths:
       security:
         - api_key: []
 
-    post: 
+    post:
       tags: ["files"]
       summary: "Submit a file"
       description: "Call this endpoint to submit a file via a form. Authentication is optional."
@@ -120,7 +120,7 @@ paths:
           multipart/form-data:
             schema:
               type: object
-              properties: 
+              properties:
                 file:
                   description: "The name of this parameter doesn't matter"
                   type: string
@@ -132,6 +132,12 @@ paths:
           required: true
           schema:
             type: "string"
+        - in: "query"
+          name: "redirectUrl"
+          description: >
+            An optional redirect URL. If provided, all responses are replaced to a redirect to that URL.
+          schema:
+            type: string
       responses:
         403:
           description: "Forbidden"
@@ -197,7 +203,7 @@ paths:
               schema:
                 allOf:
                   - type: "object"
-                    properties: 
+                    properties:
                       success:
                         type: boolean
                       data:
@@ -209,10 +215,30 @@ paths:
                           url:
                             type: "string"
                             description: "The URL of the newly uploaded file"
+        303:
+          description: >
+            File upload redirection - only if `redirectUrl` was specified.
+
+            This is **not** actually a text/plain answer but an HTTP redirection.
+
+            It corresponds to a serialization in URL parameters of the answer + the response code (in parameter `code`)
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                "Success":
+                  value: redirectUrl?success=true&code=200&ticket=<upload ticket>&url=<uploaded file URL>
+                  description: >
+                    Returned in case of success. Beware: **DO NOT USE THE URL DIRECTLY FOR YOUR BACKEND**. You can use it to display the uploaded file, but for the backend please use the status endpoint.
+                "Error":
+                  value: redirectUrl?success=false&code=40x&error=<the error name>&errorMessage=<the error message>
+                  description: >
+                    Returned in case of error. See the other error codes for more details on the error name and message + the codes that can be returned.
       security:
         - api_key: []
   /files/{app}/{container}:
-    get: 
+    get:
       tags: ["files"]
       summary: "List all files in a container"
       operationId: "listFiles"
@@ -253,7 +279,7 @@ paths:
       security:
         - api_key: ["uploads/files/:app/list"]
         - delegation: []
-    post: 
+    post:
       tags: ["files"]
       summary: "Create a new upload request"
       description: "Create a new upload request in specified container. This can only be called by APP tokens."
@@ -280,9 +306,9 @@ paths:
           application/json:
             schema:
               type: object
-              properties: 
+              properties:
                 # uploader: Option[Principal] = None, replacement: ReplacementPolicy.Value = ReplacementPolicy.NoReplace, replaceId: Option[Int] = None
-                uploader: 
+                uploader:
                   $ref: "#/components/schemas/Principal"
                 replacement:
                   type: string
@@ -323,7 +349,7 @@ paths:
       security:
         - api_key: ["uploads/requests/:app/new"]
   /files/{app}/{container}/{principal}:
-    get: 
+    get:
       tags: ["files"]
       summary: "List all files in a container uploaded by a given principal."
       description: "A given principal can ALWAYS access to the list of files it uploaded (simply use its token in the Authentication header)."
@@ -372,7 +398,7 @@ paths:
         - api_key: ["uploads/files/:app/list"]
         - delegation: []
   /uploadRequests/{ticket}:
-    get: 
+    get:
       tags: ["files"]
       summary: "Get the status of an upload request."
       operationId: "uploadRequestStatus"
@@ -411,10 +437,10 @@ paths:
                 required:
                   - uploaded
                 properties:
-                  uploaded: 
+                  uploaded:
                     type: boolean
                     description: "Describes whether or not a file has been uploaded for this request."
-                  upload: 
+                  upload:
                     $ref: "#/components/schemas/Upload"
               examples:
                 "No uploaded file":
@@ -437,7 +463,7 @@ paths:
       security:
         - api_key: ["uploads/files/:app/status"]
   /delegation:
-    post: 
+    post:
       tags: ["delegation"]
       summary: "Create a delegation token."
       description: "Creates a token that delegates the permission to read the files in a container. This token will have to be presented in the `Session` header for the requests that need this authorization."
@@ -454,8 +480,8 @@ paths:
               required:
                 - appId
                 - containers
-              properties: 
-                principal: 
+              properties:
+                principal:
                   $ref: "#/components/schemas/Principal"
                 appId:
                   type: number
@@ -494,7 +520,7 @@ paths:
                   - success
                   - data
                 properties:
-                  success: 
+                  success:
                     type: boolean
                   data:
                     type: string
@@ -502,7 +528,7 @@ paths:
       security:
         - api_key: ["uploads/files/:app/list/:container"]
   /containers/{app}:
-    get: 
+    get:
       tags: ["containers"]
       summary: "List containers belonging to an app."
       operationId: "getContainers"
@@ -536,7 +562,7 @@ paths:
                   $ref: "#/components/schemas/SimpleContainer"
       security:
         - api_key: ["uploads/containers/:app/get/*"]
-    post: 
+    post:
       tags: ["containers"]
       summary: "Create a new container."
       operationId: "createContainer"
@@ -560,7 +586,7 @@ paths:
               allowedTypes:
                 "image/png": "png"
                 "image/jpeg": "jpg"
-            
+
       responses:
         401:
           description: "Authentication missing or invalid"
@@ -574,7 +600,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponse"
-        
+
         400:
           description: "Some fields are missing or invalid in the request."
           content:
@@ -591,7 +617,7 @@ paths:
                   - success
                   - data
                 properties:
-                  success: 
+                  success:
                     type: boolean
                   data:
                     type: number
@@ -599,7 +625,7 @@ paths:
       security:
         - api_key: ["uploads/containers/:app/create"]
   /containers/{app}/{container}:
-    get: 
+    get:
       tags: ["containers"]
       summary: "Get a container."
       operationId: "getContainer"
@@ -645,7 +671,7 @@ paths:
                   $ref: "#/components/schemas/Container"
       security:
         - api_key: ["uploads/containers/:app/get/:container"]
-    put: 
+    put:
       tags: ["containers"]
       summary: "Update a container."
       operationId: "updateContainer"
@@ -675,7 +701,7 @@ paths:
               allowedTypes:
                 "image/png": "png"
                 "image/jpeg": "jpg"
-            
+
       responses:
         401:
           description: "Authentication missing or invalid"
@@ -689,7 +715,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponse"
-        
+
         404:
           description: "There is no container with this appID/name combination."
           content:
@@ -711,11 +737,11 @@ paths:
                 required:
                   - success
                 properties:
-                  success: 
+                  success:
                     type: boolean
       security:
         - api_key: ["uploads/containers/:app/update/:container"]
-    delete: 
+    delete:
       tags: ["containers"]
       summary: "Delete a container and its files."
       operationId: "deleteContainer"
@@ -745,7 +771,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponse"
-        
+
         404:
           description: "There is no container with this appID/name combination."
           content:
@@ -761,7 +787,7 @@ paths:
                 required:
                   - success
                 properties:
-                  success: 
+                  success:
                     type: boolean
       security:
         - api_key: ["uploads/containers/:app/delete/:container"]
@@ -770,7 +796,7 @@ components:
     api_key:
       type: http
       scheme: bearer
-      bearerFormat: JWT 
+      bearerFormat: JWT
     delegation:
       type: apiKey
       in: header
@@ -785,16 +811,16 @@ components:
     Container:
       description: "A container with its map of allowed MIME types"
       type: "object"
-      required: 
+      required:
         - maxFileSizeBytes
         - containerName
         - allowedTypes
       properties:
-        containerName: 
+        containerName:
           type: string
         containerId:
           type: number
-        appId: 
+        appId:
           type: number
         maxFileSizeBytes:
           type: number
@@ -814,15 +840,15 @@ components:
     SimpleContainer:
       description: "A container"
       type: "object"
-      required: 
+      required:
         - maxFileSizeBytes
         - containerName
       properties:
-        containerName: 
+        containerName:
           type: string
         containerId:
           type: number
-        appId: 
+        appId:
           type: string
         maxFileSizeBytes:
           type: number
@@ -830,18 +856,18 @@ components:
     Upload:
       description: "An uploaded file in a container"
       type: "object"
-      required: 
+      required:
         - uploadId
         - containerId
         - url
         - mimeType
         - sizeBytes
       properties:
-        uploadId: 
+        uploadId:
           type: number
         containerId:
           type: number
-        url: 
+        url:
           type: string
         mimeType:
           type: string
@@ -852,7 +878,7 @@ components:
           $ref: "#/components/schemas/Principal"
     ApiResponse:
       type: "object"
-      required: 
+      required:
         - success
       properties:
         success:

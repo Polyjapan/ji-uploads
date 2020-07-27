@@ -6,7 +6,7 @@
 +nocsrf
 PUT        /files/:ticket                           controllers.UploadsController.uploadFile(ticket: String)
 +nocsrf
-POST        /files/:ticket                          controllers.UploadsController.uploadFileFormData(ticket: String)
+POST        /files/:ticket                          controllers.UploadsController.uploadFileFormData(ticket: String, redirectUrl: Option[String])
 GET        /files/:app/:container                   controllers.UploadsController.getFiles(app: Int, container: String)
 GET        /files/:app/:container/:principal        controllers.UploadsController.getUserFiles(app: Int, container: String, principal: String)
 

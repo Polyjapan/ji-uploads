@@ -33,6 +33,9 @@ class UploadRequestsController @Inject()(cc: ControllerComponents, uploads: Uplo
           Future.successful(Ok(Json.toJson(UploadStatusResponse(false, None))))
         } else {
           // Louis: Deleting requests makes this endpoint non idempotent, and I don't think it's useful in any way
+          // Louis²: this was actually probably implemented to avoid the ability for users to reuse previous requests - don't yet know the limitations for this.
+          // This current system allows a user to upload a file in a container A and then return it to an app that "believed" that the file was uploaded into a container B
+          // We should definitely implement a procedure so that Uploads directly talks to the requesting server when an upload is complete.
           // uploadRequests.deleteRequest(ticket).flatMap(_ =>
             uploads.getUpload(uploadId.get) map {
               case Some(upload) =>

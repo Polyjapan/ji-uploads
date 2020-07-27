@@ -11,10 +11,11 @@ import pdi.jwt.JwtPlayImplicits
 import play.api.Configuration
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.Json
-import play.api.mvc.{AbstractController, ControllerComponents}
+import play.api.mvc.{AbstractController, ControllerComponents, Result}
 import services.{FileHandlingService, JWTService}
 import utils.AuthUtils
 
+import scala.collection.immutable
 import scala.concurrent.{ExecutionContext, Future}
 
 
@@ -30,10 +31,28 @@ class UploadsController @Inject()(cc: ControllerComponents, uploads: UploadsMode
     GET /files/:app/:container
     GET /files/:app/:container/:user <!-- always allowed for an user / allowed for others -->
    */
-  def uploadFileFormData(ticket: String) = authorize.optional().async(parse.multipartFormData) { rq =>
+
+  /**
+   * Returns the error response, or a redirection with all the error details
+   */
+  private def errorOrRedirect(redirect: Option[String])(error: APIResponse, code: Int, result: APIResponse => Result): Result = redirect match {
+    case Some(str) =>
+      val params: Map[String, Seq[String]] = Map(
+        "code" -> Seq[String](s"$code"),
+        "success" -> Seq[String](s"${error.success}"),
+        "error" -> Seq[String](error.error.getOrElse("unknown")),
+        "errorMessage" -> Seq[String](error.errorMessage.getOrElse("Unknown error.")),
+      )
+      Redirect(str, params)
+    case None => result(error)
+  }
+
+  def uploadFileFormData(ticket: String, redirectUrl: Option[String] = None) = authorize.optional().async(parse.multipartFormData) { rq =>
     rq.body.files.headOption match {
       case Some(file) => doUploadFile(ticket, file.ref, rq)
-      case None => Future.successful(BadRequest(Json.toJson(APIResponse("no_file", "The request doesn't contain any file."))))
+      case None => Future.successful(
+        errorOrRedirect(redirectUrl)(APIResponse("no_file", "The request doesn't contain any file."), BAD_REQUEST, e => BadRequest(Json.toJson(e)))
+      )
     }
   }
 
@@ -41,8 +60,29 @@ class UploadsController @Inject()(cc: ControllerComponents, uploads: UploadsMode
     doUploadFile(ticket, rq.body, rq)
   }
 
-  private def doUploadFile(ticket: String, file: TemporaryFile, rq: authorize.OptionalAuthorizedRequest[_]) = {
+  private def doUploadFile(ticket: String, file: TemporaryFile, rq: authorize.OptionalAuthorizedRequest[_], redirect: Option[String] = None): Future[Result] = {
     val user = rq.principal
+
+    /**
+     * Returns the error response, or a redirection with all the error details
+     */
+    val errorOrRedirect: (APIResponse, Int, APIResponse => Result) => Result = this.errorOrRedirect(redirect)
+
+    /**
+     * Returns the success response, or a redirection with ticket and URL
+     */
+    def successOrRedirect(ticket: String, url: String) = redirect match {
+      case Some(str) =>
+        val params: Map[String, Seq[String]] = Map(
+          "code" -> Seq("200"),
+          "success" -> Seq("true"),
+          "ticket" -> Seq(ticket),
+          "url" -> Seq(url)
+        )
+        Redirect(str, params)
+      case None =>
+        Ok(Json.toJson(APIResponse(Json.obj("ticket" -> ticket, "url" -> url))))
+    }
 
     uploadRequests.getRequest(ticket) flatMap {
       case Some(request) if request.uploadId.isEmpty =>
@@ -55,8 +95,11 @@ class UploadsController @Inject()(cc: ControllerComponents, uploads: UploadsMode
           case _ => false
         }
 
-        if (!authorized) Future.successful(Forbidden(Json.toJson(APIResponse("forbidden", "The upload ticket was created for an other principal."))))
-        else {
+        if (!authorized) {
+          Future.successful(
+            errorOrRedirect(APIResponse("forbidden", "The upload ticket was created for an other principal."), FORBIDDEN, e => Forbidden(Json.toJson(e)))
+          )
+        } else {
           containers.getContainer(request.containerId).flatMap { container =>
             // We have permission, let's move the file
 
@@ -66,10 +109,14 @@ class UploadsController @Inject()(cc: ControllerComponents, uploads: UploadsMode
 
             if (!container.allowedTypes.keySet(mime)) {
               println("Error: invalid mime " + mime + ". Returning 400.")
-              Future.successful(BadRequest(Json.toJson(APIResponse("invalid_mime", "This file type is not allowed. Allowed types: " + container.allowedTypes.keySet))))
+              Future.successful(
+                errorOrRedirect(APIResponse("invalid_mime", "This file type is not allowed. Allowed types: " + container.allowedTypes.keySet), BAD_REQUEST, e => BadRequest(Json.toJson(e)))
+              )
             } else if (size > container.maxFileSizeBytes) {
               println("Error: invalid file size " + size + ". Returning 400.")
-              Future.successful(BadRequest(Json.toJson(APIResponse("file_too_big", "The file is too big. Maximal size: " + container.maxFileSizeBytes))))
+              Future.successful(
+                errorOrRedirect(APIResponse("file_too_big", "The file is too big. Maximal size: " + container.maxFileSizeBytes), BAD_REQUEST, e => BadRequest(Json.toJson(e)))
+              )
             } else {
               val fileName = files.saveFile(container.containerId.get, file, container.allowedTypes(mime))
 
@@ -84,18 +131,20 @@ class UploadsController @Inject()(cc: ControllerComponents, uploads: UploadsMode
 
               replace.flatMap(_ => uploads.createUpload(request.containerId, user.map(_.principal), fileName, mime, size).flatMap(uploadId => {
                 uploadRequests.setUploadId(request.requestId.get, uploadId).map { _ =>
-                  Ok(Json.toJson(APIResponse(Json.obj(
-                    "ticket" -> ticket, "url" -> files.getUrl(container.containerId.get, fileName)
-                  ))))
+                  successOrRedirect(ticket, url = files.getUrl(container.containerId.get, fileName))
                 }
               }))
             }
           }
         }
       case Some(_) =>
-        Future.successful(NotFound(Json.toJson(APIResponse("already_used", "The upload ticket was already used."))))
+        Future.successful(
+          errorOrRedirect(APIResponse("already_used", "The upload ticket was already used."), NOT_FOUND, e => NotFound(Json.toJson(e)))
+        )
       case _ =>
-        Future.successful(NotFound(Json.toJson(APIResponse("not_found", "The upload ticket was not found."))))
+        Future.successful(
+          errorOrRedirect(APIResponse("not_found", "The upload ticket was not found."), NOT_FOUND, e => NotFound(Json.toJson(e)))
+        )
     }
   }
 
