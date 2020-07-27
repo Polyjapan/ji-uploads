@@ -448,15 +448,16 @@ paths:
                   value:
                     uploaded: false
                 "File uploaded":
-                  description: "A file has been uploaded"
+                  description: >
+                    A file has been uploaded.
+
+                    **Caution**: if you got your token from an untrusted source (i.e. a web browser) + you need the file to be in a specific container, you **have to** check the containerId from the returned file and make sure it matches the containerId you expected.
                   value:
                     uploaded: true
                     upload:
                       uploadId: 10
                       containerId: 7
-                      uploader:
-                        id: 1
-                        name: user
+                      uploader: user|1
                       url: "https://static.japan-impact.ch/uploads/7/d8e9Chejdaus98cusc8sadejbQZHXmnjkakOS.jpg"
                       mimeType: "image/jpeg"
                       sizeBytes: 100987
