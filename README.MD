@@ -8,6 +8,10 @@ Files are uploaded to containers. Containers are owned by apps. Container names 
 
 The container is named, and it defines a set of accepted Mime Types (+ a maximum file size for each file).
 
+## API Doc
+
+You can find the full API documentation on https://api.japan-impact.ch/docs/ (select "uploads").
+
 ## How to upload?
 
 You will typically first want to create/update a container to receive the files. Once you have it:

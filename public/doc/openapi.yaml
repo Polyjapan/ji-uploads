@@ -346,8 +346,7 @@ paths:
           description: "The principal that authored the files"
           required: true
           schema:
-            type: "string"
-            example: "user|1 or app|1 (<user|app>|<id of said user/app>)"
+            $ref: "#/components/schemas/Principal"
       responses:
         403:
           description: "The provided token doesn't allow read access to this container."
@@ -779,16 +778,10 @@ components:
       description: "A JWT delegating read access to some containers to an unauthenticated user"
   schemas:
     Principal:
-      type: "object"
-      required: 
-        - id
-        - name
-      properties:
-        id: 
-          type: number
-        name:
-          type: string
-          enum: [app, user]
+      format: "[app|user]|<app or user ID>"
+      type: "string"
+      pattern: "^[a-z0-9.]+|[0-9]+$"
+      example: "user|1"
     Container:
       description: "A container with its map of allowed MIME types"
       type: "object"
