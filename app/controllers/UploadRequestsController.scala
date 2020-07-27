@@ -32,14 +32,15 @@ class UploadRequestsController @Inject()(cc: ControllerComponents, uploads: Uplo
         } else if (uploadId.isEmpty) {
           Future.successful(Ok(Json.toJson(UploadStatusResponse(false, None))))
         } else {
-          uploadRequests.deleteRequest(ticket).flatMap(_ =>
+          // Louis: Deleting requests makes this endpoint non idempotent, and I don't think it's useful in any way
+          // uploadRequests.deleteRequest(ticket).flatMap(_ =>
             uploads.getUpload(uploadId.get) map {
               case Some(upload) =>
                 Ok(Json.toJson(UploadStatusResponse(true, Some(files.setUrlInUpload(upload)))))
               case None =>
                 Ok(Json.toJson(UploadStatusResponse(false, None)))
             }
-          )
+          // )
         }
       case None => Future.successful(NotFound(Json.toJson(APIResponse("not_found", "The given upload request doesn't exist."))))
     }
