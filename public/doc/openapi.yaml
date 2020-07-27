@@ -1,0 +1,874 @@
+openapi: "3.0.0"
+info:
+  description: "Japan Impact's file uploads API"
+  version: "1.0.0"
+  title: "JI Uploads"
+servers:
+ - url: "https://api.japan-impact.ch/uploads"
+tags:
+  - name: "containers"
+    description: "Management of file containers"
+  - name: "files"
+    description: "Management of files in containers"
+  - name: "delegation"
+    description: "Delegate read-access to containers"
+paths:
+  /files/{ticket}:
+    put:
+      tags: ["files"]
+      summary: "Submit a file"
+      description: "Call this endpoint to submit a file directly. Authentication is optional."
+      operationId: "putFile"
+      requestBody:
+        description: "The file you wish to upload, with no header info"
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      parameters:
+        - in: "path"
+          name: "ticket"
+          description: "The upload ticket"
+          required: true
+          schema:
+            type: "string"
+      responses:
+        403:
+          description: "Forbidden"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+              examples:
+                "Invalid principal":
+                  description: "The request was created for a specific principal and the upload is not authentified or comes from an other principal"
+                  value:
+                    success: "false"
+                    error: "forbidden"
+                    errorMessage: "The upload ticket was created for an other principal."
+        400:
+          description: "Invalid input"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+              examples:
+                "Invalid Mime":
+                  description: "The MIME type of the sent file isn't allowd in this container."
+                  value:
+                    success: "false"
+                    error: "invalid_mime"
+                    errorMessage: "This file type is not allowed. Allowed types: image/png"
+                "File too big":
+                  description: "The size of the file exceeds the maximum allowed one in the container."
+                  value:
+                    success: "false"
+                    error: "file_too_big"
+                    errorMessage: "The file is too big. Maximal size: 100"
+        404:
+          description: "Invalid token"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+              examples:
+                "Token already used":
+                  description: "The token for this upload was already used previously."
+                  value:
+                    success: "false"
+                    error: "already_used"
+                    errorMessage: "The upload ticket was already used."
+                "Token not found":
+                  description: "The token for this upload doesn't exist."
+                  value:
+                    success: "false"
+                    error: "not_found"
+                    errorMessage: "The upload ticket was not found."
+        200:
+          description: "File upload successful"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: "object"
+                    properties: 
+                      success:
+                        type: boolean
+                      data:
+                        type: "object"
+                        properties:
+                          ticket:
+                            type: "string"
+                            description: "The upload ticket, repeated"
+                          url:
+                            type: "string"
+                            description: "The URL of the newly uploaded file"
+      security:
+        - api_key: []
+
+    post: 
+      tags: ["files"]
+      summary: "Submit a file"
+      description: "Call this endpoint to submit a file via a form. Authentication is optional."
+      operationId: "postFile"
+      requestBody:
+        description: "The file you wish to upload"
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties: 
+                file:
+                  description: "The name of this parameter doesn't matter"
+                  type: string
+                  format: binary
+      parameters:
+        - in: "path"
+          name: "ticket"
+          description: "The upload ticket"
+          required: true
+          schema:
+            type: "string"
+      responses:
+        403:
+          description: "Forbidden"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+              examples:
+                "Invalid principal":
+                  description: "The request was created for a specific principal and the upload is not authentified or comes from an other principal"
+                  value:
+                    success: "false"
+                    error: "forbidden"
+                    errorMessage: "The upload ticket was created for an other principal."
+        400:
+          description: "Invalid input"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+              examples:
+                "Invalid Mime":
+                  description: "The MIME type of the sent file isn't allowd in this container."
+                  value:
+                    success: "false"
+                    error: "invalid_mime"
+                    errorMessage: "This file type is not allowed. Allowed types: image/png"
+                "File too big":
+                  description: "The size of the file exceeds the maximum allowed one in the container."
+                  value:
+                    success: "false"
+                    error: "file_too_big"
+                    errorMessage: "The file is too big. Maximal size: 100"
+                "No file":
+                  description: "The multipart/form-data request contains no file."
+                  value:
+                    success: "false"
+                    error: "no_file"
+                    errorMessage: "The request doesn't contain any file."
+        404:
+          description: "Invalid token"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+              examples:
+                "Token already used":
+                  description: "The token for this upload was already used previously."
+                  value:
+                    success: "false"
+                    error: "already_used"
+                    errorMessage: "The upload ticket was already used."
+                "Token not found":
+                  description: "The token for this upload doesn't exist."
+                  value:
+                    success: "false"
+                    error: "not_found"
+                    errorMessage: "The upload ticket was not found."
+        200:
+          description: "File upload successful"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: "object"
+                    properties: 
+                      success:
+                        type: boolean
+                      data:
+                        type: "object"
+                        properties:
+                          ticket:
+                            type: "string"
+                            description: "The upload ticket, repeated"
+                          url:
+                            type: "string"
+                            description: "The URL of the newly uploaded file"
+      security:
+        - api_key: []
+  /files/{app}/{container}:
+    get: 
+      tags: ["files"]
+      summary: "List all files in a container"
+      operationId: "listFiles"
+      parameters:
+        - in: "path"
+          name: "app"
+          description: "The ID of the app owning the container"
+          required: true
+          schema:
+            type: "number"
+        - in: "path"
+          name: "container"
+          description: "The name of the container"
+          required: true
+          schema:
+            type: "string"
+      responses:
+        403:
+          description: "The provided token doesn't allow read access to this container."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        401:
+          description: "Authentication missing or invalid"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        200:
+          description: "List of files in the container"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Upload"
+      security:
+        - api_key: ["uploads/files/:app/list"]
+        - delegation: []
+    post: 
+      tags: ["files"]
+      summary: "Create a new upload request"
+      description: "Create a new upload request in specified container. This can only be called by APP tokens."
+      operationId: "startUpload"
+      parameters:
+        - in: "path"
+          name: "app"
+          description: "The ID of the app owning the container"
+          required: true
+          schema:
+            type: "number"
+        - in: "path"
+          name: "container"
+          description: "The name of the container"
+          required: true
+          schema:
+            type: "string"
+      requestBody:
+        description: >
+          The upload request details. <br>
+          If an uploader is provided, **a JWT token for that principal will be mandatory** to upload the file.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: 
+                # uploader: Option[Principal] = None, replacement: ReplacementPolicy.Value = ReplacementPolicy.NoReplace, replaceId: Option[Int] = None
+                uploader: 
+                  $ref: "#/components/schemas/Principal"
+                replacement:
+                  type: string
+                  enum: [NoReplace, ReplaceOne, ReplaceAll]
+                  default: NoReplace
+                  description: >
+                    Defines the replacement policy for this upload (not fully implemented yet - files are removed from the container listing but still present physically):
+                     * `NoReplace` - No file will be replaced
+                     * `ReplaceOne` - The upload with id `replaceId` will be removed uppon successful completion of this upload request. Automatically set if `replaceId` is present.
+                     * `ReplaceAll` - The upload will delete all files uploaded by the same principal as specified in `uploader`
+                replaceId:
+                  type: number
+      responses:
+        403:
+          description: "Illegal replacement or missing permissions."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        401:
+          description: "Authentication missing or invalid"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        200:
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: string
+                    description: "The upload token, to use in putFile or postFile"
+      security:
+        - api_key: ["uploads/requests/:app/new"]
+  /files/{app}/{container}/{principal}:
+    get: 
+      tags: ["files"]
+      summary: "List all files in a container uploaded by a given principal."
+      description: "A given principal can ALWAYS access to the list of files it uploaded (simply use its token in the Authentication header)."
+      operationId: "listUserFiles"
+      parameters:
+        - in: "path"
+          name: "app"
+          description: "The ID of the app owning the container"
+          required: true
+          schema:
+            type: "number"
+        - in: "path"
+          name: "container"
+          description: "The name of the container"
+          required: true
+          schema:
+            type: "string"
+        - in: "path"
+          name: "principal"
+          description: "The principal that authored the files"
+          required: true
+          schema:
+            type: "string"
+            example: "user|1 or app|1 (<user|app>|<id of said user/app>)"
+      responses:
+        403:
+          description: "The provided token doesn't allow read access to this container."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        401:
+          description: "Authentication missing or invalid"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        200:
+          description: "List of files in the container uploaded by that principal"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Upload"
+      security:
+        - api_key: ["uploads/files/:app/list"]
+        - delegation: []
+  /uploadRequests/{ticket}:
+    get: 
+      tags: ["files"]
+      summary: "Get the status of an upload request."
+      operationId: "uploadRequestStatus"
+      parameters:
+        - in: "path"
+          name: "ticket"
+          description: "The ticket of the upload request"
+          required: true
+          schema:
+            type: "string"
+      responses:
+        404:
+          description: "The provided token doesn't correspond to an upload request."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        403:
+          description: "The provided token doesn't allow read access to this container."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        401:
+          description: "Authentication missing or invalid"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        200:
+          description: "The status of the request"
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - uploaded
+                properties:
+                  uploaded: 
+                    type: boolean
+                    description: "Describes whether or not a file has been uploaded for this request."
+                  upload: 
+                    $ref: "#/components/schemas/Upload"
+              examples:
+                "No uploaded file":
+                  description: "The file has not been uploaded yet"
+                  value:
+                    uploaded: false
+                "File uploaded":
+                  description: "A file has been uploaded"
+                  value:
+                    uploaded: true
+                    upload:
+                      uploadId: 10
+                      containerId: 7
+                      uploader:
+                        id: 1
+                        name: user
+                      url: "https://static.japan-impact.ch/uploads/7/d8e9Chejdaus98cusc8sadejbQZHXmnjkakOS.jpg"
+                      mimeType: "image/jpeg"
+                      sizeBytes: 100987
+      security:
+        - api_key: ["uploads/files/:app/status"]
+  /delegation:
+    post: 
+      tags: ["delegation"]
+      summary: "Create a delegation token."
+      description: "Creates a token that delegates the permission to read the files in a container. This token will have to be presented in the `Session` header for the requests that need this authorization."
+      operationId: "createDelegation"
+      requestBody:
+        description: >
+          The delegation request details. <br>
+          If a principal is provided, **a JWT token for that principal will be mandatory** in the `Authentication` header in order for this delegation to be accepted.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - appId
+                - containers
+              properties: 
+                principal: 
+                  $ref: "#/components/schemas/Principal"
+                appId:
+                  type: number
+                  description: "The id of the app to which the containers belong"
+                containers:
+                  type: array
+                  items:
+                    type: string
+                  description: "The list of containers to which you wish to grant read access"
+      responses:
+        401:
+          description: "Authentication missing or invalid"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        403:
+          description: "The provided token doesn't allow read access to this container."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        400:
+          description: "Empty request (you provided an empty containers list)"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        200:
+          description: "The JWT session token, valid for 24hrs"
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - data
+                properties:
+                  success: 
+                    type: boolean
+                  data:
+                    type: string
+                    description: "The created token"
+      security:
+        - api_key: ["uploads/files/:app/list/:container"]
+  /containers/{app}:
+    get: 
+      tags: ["containers"]
+      summary: "List containers belonging to an app."
+      operationId: "getContainers"
+      parameters:
+        - in: "path"
+          name: "app"
+          description: "The id of the app"
+          required: true
+          schema:
+            type: "number"
+      responses:
+        401:
+          description: "Authentication missing or invalid"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        403:
+          description: "The provided token doesn't allow read access to the containers of this app."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        200:
+          description: "The list of containers belonging to this app"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SimpleContainer"
+      security:
+        - api_key: ["uploads/containers/:app/get/*"]
+    post: 
+      tags: ["containers"]
+      summary: "Create a new container."
+      operationId: "createContainer"
+      parameters:
+        - in: "path"
+          name: "app"
+          description: "The id of the app"
+          required: true
+          schema:
+            type: "number"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/Container"
+            example:
+              containerName: MyContainer
+              maxFileSizeBytes: 100000
+              allowedTypes:
+                "image/png": "png"
+                "image/jpeg": "jpg"
+            
+      responses:
+        401:
+          description: "Authentication missing or invalid"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        403:
+          description: "The provided token doesn't allow write access to the containers of this app."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        
+        400:
+          description: "Some fields are missing or invalid in the request."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        200:
+          description: "The list of containers belonging to this app"
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - data
+                properties:
+                  success: 
+                    type: boolean
+                  data:
+                    type: number
+                    description: "The id of the created container"
+      security:
+        - api_key: ["uploads/containers/:app/create"]
+  /containers/{app}/{container}:
+    get: 
+      tags: ["containers"]
+      summary: "Get a container."
+      operationId: "getContainer"
+      parameters:
+        - in: "path"
+          name: "app"
+          description: "The id of the owner app"
+          required: true
+          schema:
+            type: "number"
+        - in: "path"
+          name: "container"
+          description: "The name of the container"
+          required: true
+          schema:
+            type: "string"
+      responses:
+        401:
+          description: "Authentication missing or invalid"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        403:
+          description: "The provided token doesn't allow read access to the containers of this app."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        404:
+          description: "There is no container with this appID/name combination."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        200:
+          description: "The container details"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Container"
+      security:
+        - api_key: ["uploads/containers/:app/get/:container"]
+    put: 
+      tags: ["containers"]
+      summary: "Update a container."
+      operationId: "updateContainer"
+      parameters:
+        - in: "path"
+          name: "app"
+          description: "The id of the app"
+          required: true
+          schema:
+            type: "number"
+        - in: "path"
+          name: "container"
+          description: "The name of the container"
+          required: true
+          schema:
+            type: "string"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/Container"
+            example:
+              containerName: MyContainer
+              maxFileSizeBytes: 100000
+              allowedTypes:
+                "image/png": "png"
+                "image/jpeg": "jpg"
+            
+      responses:
+        401:
+          description: "Authentication missing or invalid"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        403:
+          description: "The provided token doesn't allow write access to the containers of this app."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        
+        404:
+          description: "There is no container with this appID/name combination."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        400:
+          description: "Some fields are missing or invalid in the request."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        200:
+          description: "The update succeeded"
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                properties:
+                  success: 
+                    type: boolean
+      security:
+        - api_key: ["uploads/containers/:app/update/:container"]
+    delete: 
+      tags: ["containers"]
+      summary: "Delete a container and its files."
+      operationId: "deleteContainer"
+      parameters:
+        - in: "path"
+          name: "app"
+          description: "The id of the app"
+          required: true
+          schema:
+            type: "number"
+        - in: "path"
+          name: "container"
+          description: "The name of the container"
+          required: true
+          schema:
+            type: "string"
+      responses:
+        401:
+          description: "Authentication missing or invalid"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        403:
+          description: "The provided token doesn't allow write access to the containers of this app."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        
+        404:
+          description: "There is no container with this appID/name combination."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        200:
+          description: "The deletion succeeded"
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                properties:
+                  success: 
+                    type: boolean
+      security:
+        - api_key: ["uploads/containers/:app/delete/:container"]
+components:
+  securitySchemes:
+    api_key:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT 
+    delegation:
+      type: apiKey
+      in: header
+      name: Session
+      description: "A JWT delegating read access to some containers to an unauthenticated user"
+  schemas:
+    Principal:
+      type: "object"
+      required: 
+        - id
+        - name
+      properties:
+        id: 
+          type: number
+        name:
+          type: string
+          enum: [app, user]
+    Container:
+      description: "A container with its map of allowed MIME types"
+      type: "object"
+      required: 
+        - maxFileSizeBytes
+        - containerName
+        - allowedTypes
+      properties:
+        containerName: 
+          type: string
+        containerId:
+          type: number
+        appId: 
+          type: number
+        maxFileSizeBytes:
+          type: number
+          format: int64
+        allowedTypes:
+          type: object
+          additionalProperties:
+            type: string
+      example:
+        containerName: MyContainer
+        containerId: 10
+        appId: 7
+        maxFileSizeBytes: 100000
+        allowedTypes:
+          "image/png": "png"
+          "image/jpeg": "jpg"
+    SimpleContainer:
+      description: "A container"
+      type: "object"
+      required: 
+        - maxFileSizeBytes
+        - containerName
+      properties:
+        containerName: 
+          type: string
+        containerId:
+          type: number
+        appId: 
+          type: string
+        maxFileSizeBytes:
+          type: number
+          format: int64
+    Upload:
+      description: "An uploaded file in a container"
+      type: "object"
+      required: 
+        - uploadId
+        - containerId
+        - url
+        - mimeType
+        - sizeBytes
+      properties:
+        uploadId: 
+          type: number
+        containerId:
+          type: number
+        url: 
+          type: string
+        mimeType:
+          type: string
+        sizeBytes:
+          type: number
+          format: int64
+        uploader:
+          $ref: "#/components/schemas/Principal"
+    ApiResponse:
+      type: "object"
+      required: 
+        - success
+      properties:
+        success:
+          type: "boolean"
+          description: "True if the operation succeeded, false if it failed"
+          example: false
+        error:
+          type: "string"
+        errorMessage:
+          type: "string"
+        data:
+          type: "object"

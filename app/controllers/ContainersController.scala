@@ -6,7 +6,7 @@ import ch.japanimpact.auth.api.apitokens.AuthorizationActions._
 import javax.inject.Inject
 import models.ContainersModel
 import play.api.libs.json.{JsNumber, Json}
-import play.api.mvc.{AbstractController, ControllerComponents}
+import play.api.mvc.{AbstractController, Action, ControllerComponents}
 import services.FileHandlingService
 import utils.AuthUtils._
 
@@ -18,7 +18,7 @@ class ContainersController @Inject()(cc: ControllerComponents, containers: Conta
 
   private val namingRegex = "^[a-zA-Z0-9_-]{2,128}$".r
 
-  def createContainer(app: Int) = authorize(OnlyApps, computeScopes("uploads/containers/:app/create", app)).async(parse.json[Container]) { req =>
+  def createContainer(app: Int): Action[Container] = authorize(OnlyApps, computeScopes("uploads/containers/:app/create", app)).async(parse.json[Container]) { req =>
     val container = req.body
 
     if (container.allowedTypes.isEmpty)

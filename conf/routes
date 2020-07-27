@@ -26,3 +26,5 @@ PUT        /containers/:app/:container              controllers.ContainersContro
 DELETE        /containers/:app/:container           controllers.ContainersController.deleteContainer(app: Int, container: String)
 GET        /containers/:app/:container              controllers.ContainersController.getContainer(app: Int, container: String)
 GET        /containers/:app                         controllers.ContainersController.getContainers(app: Int)
+
+GET  /openapi.yaml        controllers.Assets.at(file="doc/openapi.yaml")

@@ -161,7 +161,7 @@ If there is an error, you'll receive this (with a non 200 result code):
 
 ## Delegation
 
-You can provide tokens for users to list the files in one of your containers for a limited period of time (48 hours).
+You can provide tokens for users to list the files in one of your containers for a limited period of time (24 hours).
 
 The endpoint is `POST /delegation`.
 
