@@ -852,9 +852,9 @@ components:
           default: NoReplace
           description: >
             Defines the replacement policy for this upload (not fully implemented yet - files are removed from the container listing but still present physically):
-                     * `NoReplace` - No file will be replaced
-                     * `ReplaceOne` - The upload with id `replaceId` will be removed uppon successful completion of this upload request. Automatically set if `replaceId` is present.
-                     * `ReplaceAll` - The upload will delete all files uploaded by the same principal as specified in `uploader`
+             * `NoReplace` - No file will be replaced
+             * `ReplaceOne` - The upload with id `replaceId` will be removed uppon successful completion of this upload request. Automatically set if `replaceId` is present.
+             * `ReplaceAll` - The upload will delete all files uploaded by the same principal as specified in `uploader`
         replaceId:
           type: number
         callbackUrl:
@@ -868,11 +868,15 @@ components:
 
             The format of the message sent to your `callbackUrl` is as follows:
 
-            ```{
+            ```
+
+            {
                 "upload": "<a full Upload object, see endpoints /files/{app}/{container} for a description of the Upload object>",
                 "ticket": "the upload ticket corresponding to the request",
                 "sig": "a signature, or a null - see parameter callbackSecret"
-            }```
+            }
+
+            ```
 
             You are free to add query parameters in this callback URL, for example to automatically link the upload with a record in your own app.
 
