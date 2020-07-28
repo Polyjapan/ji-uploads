@@ -34,15 +34,15 @@ class UploadRequestsModel @Inject()(dbApi: play.api.db.DBApi)(implicit ec: Execu
   // Note: it's intentional not to store the app who requested the upload, so that apps can forward those between them if they want
   case class UploadRequest(requestId: Option[Int], requestTicket: String, containerId: Int,
                            uploaderType: Option[String], uploaderId: Option[Int], replacementPolicy: ReplacementPolicy.Value,
-                           replaceUpload: Option[Int], uploadId: Option[Int])
+                           replaceUpload: Option[Int], uploadId: Option[Int], callbackUrl: Option[String], callbackSecret: Option[String])
 
   private implicit val toStatement: ToParameterList[UploadRequest] = Macro.toParameters[UploadRequest]()
   private implicit val UploadRequestParser: RowParser[UploadRequest] = Macro.namedParser[UploadRequest](ColumnNaming.SnakeCase)
 
-  def createRequest(container: Int, uploader: Option[Principal], replacement: ReplacementPolicy.Value, replaceId: Option[Int]) = Future(db.withConnection { implicit c =>
+  def createRequest(container: Int, uploader: Option[Principal], replacement: ReplacementPolicy.Value, replaceId: Option[Int], callbackUrl: Option[String], callbackSecret: Option[String]) = Future(db.withConnection { implicit c =>
     val token = RandomUtils.randomString(48)
     val (ut, uid) = uploader.map(ppal => (ppal.name, ppal.id)).unzip
-    val upload = UploadRequest(None, token, container, ut, uid, replacement, replaceId, None)
+    val upload = UploadRequest(None, token, container, ut, uid, replacement, replaceId, None, callbackUrl, callbackSecret)
 
     SqlUtils.insertOne("upload_requests", upload)
 

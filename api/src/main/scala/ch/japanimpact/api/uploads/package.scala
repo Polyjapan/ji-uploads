@@ -50,13 +50,39 @@ package object uploads {
 
   object ReplacementPolicy extends Enumeration {
     type ReplacementPolicy = Value
-    val NoReplace, ReplaceOne, ReplaceAll = Value
+
+    /**
+     * Don't replace any file when uploading
+     */
+    val NoReplace = Value
+
+    /**
+     * Replace a single file (whose ID is provided in the request)
+     */
+    val ReplaceOne = Value
+
+    /**
+     * Replace all the files sent by the same uploader
+     */
+    val ReplaceAll = Value
   }
 
   case class UploadStatusResponse(uploaded: Boolean, upload: Option[Upload])
 
-
-  case class UploadRequest(uploader: Option[Principal] = None, replacement: ReplacementPolicy.Value = ReplacementPolicy.NoReplace, replaceId: Option[Int] = None)
+  /**
+   * A request to upload a new file
+   *
+   * @param uploader       an optional Principal. If specified, only that principal will be able to upload the file
+   * @param replacement    the [[ReplacementPolicy]] to use (see [[ReplacementPolicy]] for detailed documentation)
+   * @param replaceId      the ID of the upload to replace (sets the replacement policy to [[ReplacementPolicy.ReplaceOne]]
+   * @param callbackUrl    an optional URL that will be called when the upload succeeds (max 200 chrs)
+   * @param callbackSecret an optional shared secret that will be used to sign (HMAC.SHA256) the callback (max 200 chrs)
+   */
+  case class UploadRequest(uploader: Option[Principal] = None,
+                           replacement: ReplacementPolicy.Value = ReplacementPolicy.NoReplace,
+                           replaceId: Option[Int] = None,
+                           callbackUrl: Option[String] = None,
+                           callbackSecret: Option[String] = None)
 
 
   case class APIResponse(success: Boolean, error: Option[String] = None, errorMessage: Option[String] = None,

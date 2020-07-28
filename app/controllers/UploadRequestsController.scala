@@ -52,26 +52,36 @@ class UploadRequestsController @Inject()(cc: ControllerComponents, uploads: Uplo
   def startUpload(app: Int, container: String) = authorize(OnlyApps, computeScopes("uploads/requests/:app/new", app, container)).async(parse.json[UploadRequest]) { req =>
     val request = req.body
 
-    // Find the container
-    containers.getContainerId(app, container).flatMap {
-      case Some(containerId) =>
-        // Good, now check the id
-        val canReplaceThat =
-          if (request.replaceId.isEmpty) Future.successful(true)
-          else uploads.getUpload(request.replaceId.get).map(_.exists(u => u.containerId == containerId))
+    if (request.callbackSecret.exists(_.length > 200)) {
+      Future.successful(BadRequest(Json.toJson(APIResponse("too_long_secret", "The provided callback secret is too long (max 200 characters)."))))
+    } else if (request.callbackUrl.exists(_.length > 200)) {
+      Future.successful(BadRequest(Json.toJson(APIResponse("too_long_callback", "The provided callback url is too long (max 200 characters)."))))
+    } else if (request.callbackUrl.exists(u => !u.startsWith("https://"))) {
+      Future.successful(BadRequest(Json.toJson(APIResponse("illegal_url", "The provided callback url doesn't start with https://."))))
+    } else if (request.callbackUrl.exists(u => Set("localhost", "localdomain", "127.0.0.1").exists(illegal => u.toLowerCase().contains(illegal)))) {
+      Future.successful(BadRequest(Json.toJson(APIResponse("illegal_url_content", "The provided callback url contains an illegal domain."))))
+    } else {
+      // Find the container
+      containers.getContainerId(app, container).flatMap {
+        case Some(containerId) =>
+          // Good, now check the id
+          val canReplaceThat =
+            if (request.replaceId.isEmpty) Future.successful(true)
+            else uploads.getUpload(request.replaceId.get).map(_.exists(u => u.containerId == containerId))
 
-        val replacementPolicy =
-          if (request.replaceId.isDefined) ReplacementPolicy.ReplaceOne
-          else request.replacement
+          val replacementPolicy =
+            if (request.replaceId.isDefined) ReplacementPolicy.ReplaceOne
+            else request.replacement
 
-        canReplaceThat.flatMap {
-          case true =>
-            uploadRequests.createRequest(containerId, request.uploader, replacementPolicy, request.replaceId)
-              .map(ticket => Ok(Json.toJson(APIResponse(JsString(ticket)))))
-          case false =>
-            Future.successful(Forbidden(Json.toJson(APIResponse("illegal_replacement", "You cannot replace an upload that doesn't exist or that is in an other collection."))))
-        }
-      case None => Future.successful(NotFound(Json.toJson(APIResponse("not_found", "The given container doesn't exist."))))
+          canReplaceThat.flatMap {
+            case true =>
+              uploadRequests.createRequest(containerId, request.uploader, replacementPolicy, request.replaceId, request.callbackUrl, request.callbackSecret)
+                .map(ticket => Ok(Json.toJson(APIResponse(JsString(ticket)))))
+            case false =>
+              Future.successful(Forbidden(Json.toJson(APIResponse("illegal_replacement", "You cannot replace an upload that doesn't exist or that is in an other collection."))))
+          }
+        case None => Future.successful(NotFound(Json.toJson(APIResponse("not_found", "The given container doesn't exist."))))
+      }
     }
   }
 

@@ -301,26 +301,13 @@ paths:
         description: >
           The upload request details. <br>
           If an uploader is provided, **a JWT token for that principal will be mandatory** to upload the file.
+
+          **Please check the Schema of this entity, as it contains useful information regarding callback URLs.**
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                # uploader: Option[Principal] = None, replacement: ReplacementPolicy.Value = ReplacementPolicy.NoReplace, replaceId: Option[Int] = None
-                uploader:
-                  $ref: "#/components/schemas/Principal"
-                replacement:
-                  type: string
-                  enum: [NoReplace, ReplaceOne, ReplaceAll]
-                  default: NoReplace
-                  description: >
-                    Defines the replacement policy for this upload (not fully implemented yet - files are removed from the container listing but still present physically):
-                     * `NoReplace` - No file will be replaced
-                     * `ReplaceOne` - The upload with id `replaceId` will be removed uppon successful completion of this upload request. Automatically set if `replaceId` is present.
-                     * `ReplaceAll` - The upload will delete all files uploaded by the same principal as specified in `uploader`
-                replaceId:
-                  type: number
+              $ref: "#/components/schemas/UploadRequest"
       responses:
         403:
           description: "Illegal replacement or missing permissions."
@@ -854,6 +841,49 @@ components:
         maxFileSizeBytes:
           type: number
           format: int64
+    UploadRequest:
+      type: object
+      properties:
+        uploader:
+          $ref: "#/components/schemas/Principal"
+        replacement:
+          type: string
+          enum: [NoReplace, ReplaceOne, ReplaceAll]
+          default: NoReplace
+          description: >
+            Defines the replacement policy for this upload (not fully implemented yet - files are removed from the container listing but still present physically):
+                     * `NoReplace` - No file will be replaced
+                     * `ReplaceOne` - The upload with id `replaceId` will be removed uppon successful completion of this upload request. Automatically set if `replaceId` is present.
+                     * `ReplaceAll` - The upload will delete all files uploaded by the same principal as specified in `uploader`
+        replaceId:
+          type: number
+        callbackUrl:
+          type: string
+          maxLength: 200
+          description: >
+            Defines a callback URL to call when the upload succeeds. If this URL is defined, when a user
+            successfully uploads a file in this request, a `POST` request will be sent to your `callbackUrl`.
+
+            The callback URL **MUST** start with https:// and **MUST NOT** contain `localhost`, `localdomain` or `127.0.0.1`.
+
+            The format of the message sent to your `callbackUrl` is as follows:
+
+            ```{
+                "upload": "<a full Upload object, see endpoints /files/{app}/{container} for a description of the Upload object>",
+                "ticket": "the upload ticket corresponding to the request",
+                "sig": "a signature, or a null - see parameter callbackSecret"
+            }```
+
+            You are free to add query parameters in this callback URL, for example to automatically link the upload with a record in your own app.
+
+            **If you don't use a callbackSecret** (no MAC), please confirm the information you received by making an API request for that ticket.
+        callbackSecret:
+          type: string
+          maxLength: 200
+          description: >
+            Defines a secret to sign the callback payload. This is an extra security layer, so that you don't have to hide your callback URL. Provide any string here, it will be used as a key for the signature.
+
+            The algorithm used to sign is HS512 (HMAC-SHA512). The payload signed is the following: `<ticket>;<upload ID>;<container ID>;<upload URL>`. You can therefore check the signature before accepting a request.
     Upload:
       description: "An uploaded file in a container"
       type: "object"

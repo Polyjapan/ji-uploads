@@ -2,15 +2,19 @@ package controllers
 
 import java.nio.file.Files
 import java.time.Clock
+import java.util.Base64
 
-import ch.japanimpact.api.uploads.uploads.{APIResponse, ReplacementPolicy}
+import ch.japanimpact.api.uploads.uploads.{APIResponse, ReplacementPolicy, Upload}
 import ch.japanimpact.auth.api.apitokens.{AuthorizationActions, Principal}
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
 import javax.inject.Inject
 import models.{ContainersModel, UploadRequestsModel, UploadsModel}
-import pdi.jwt.JwtPlayImplicits
+import pdi.jwt.{JwtBase64, JwtPlayImplicits}
 import play.api.Configuration
 import play.api.libs.Files.TemporaryFile
-import play.api.libs.json.Json
+import play.api.libs.json.{JsNull, JsString, JsValue, Json}
+import play.api.libs.ws.WSClient
 import play.api.mvc.{AbstractController, ControllerComponents, Result}
 import services.{FileHandlingService, JWTService}
 import utils.AuthUtils
@@ -21,7 +25,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class UploadsController @Inject()(cc: ControllerComponents, uploads: UploadsModel, uploadRequests: UploadRequestsModel,
                                   containers: ContainersModel, jwt: JWTService,
-                                  files: FileHandlingService, authorize: AuthorizationActions)
+                                  files: FileHandlingService, authorize: AuthorizationActions, ws: WSClient)
                                  (implicit ec: ExecutionContext, clock: Clock, conf: Configuration) extends AbstractController(cc) with JwtPlayImplicits {
 
 
@@ -131,6 +135,29 @@ class UploadsController @Inject()(cc: ControllerComponents, uploads: UploadsMode
 
               replace.flatMap(_ => uploads.createUpload(request.containerId, user.map(_.principal), fileName, mime, size).flatMap(uploadId => {
                 uploadRequests.setUploadId(request.requestId.get, uploadId).map { _ =>
+                  // Handle post request if callback is specified
+                  if (request.callbackUrl.isDefined) {
+                    val upload = files.setUrlInUpload(Upload(uploadId, request.containerId, user.map(_.principal), fileName, mime, size))
+                    val toSign = Seq(ticket, uploadId.toString, request.containerId.toString, upload.url)
+
+                    val sig: JsValue = request.callbackSecret.map(key => {
+                      val algo = "HS512"
+                      val mac = Mac.getInstance(algo)
+                      mac.init(new SecretKeySpec(key.getBytes("UTF-8"), algo))
+                      val bytes = mac.doFinal(toSign.mkString(";").getBytes("UTF-8"))
+                      Base64.getEncoder.encodeToString(bytes)
+                    }).map(s => JsString(s)).getOrElse(JsNull)
+
+                    val json = Json.obj(
+                      "upload" -> Json.toJson(upload),
+                      "ticket" -> JsString(ticket),
+                      "sig" -> sig
+                    )
+
+                    // Do the post request
+                    ws.url(request.callbackUrl.get).post(Json.toJson(json))
+                  }
+
                   successOrRedirect(ticket, url = files.getUrl(container.containerId.get, fileName))
                 }
               }))
