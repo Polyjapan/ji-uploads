@@ -1,6 +1,6 @@
 package ch.japanimpact.api.uploads
 
-import ch.japanimpact.auth.api.apitokens.Principal
+import ch.japanimpact.auth.api.apitokens._
 import play.api.libs.json._
 
 package object uploads {
