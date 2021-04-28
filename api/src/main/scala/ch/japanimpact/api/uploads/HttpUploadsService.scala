@@ -16,14 +16,18 @@ import scala.concurrent.{ExecutionContext, Future}
  */
 @Singleton
 class HttpUploadsService @Inject()(ws: WSClient, config: Configuration, tokens: APITokensService)(implicit ec: ExecutionContext) extends UploadsService {
-  private val apiBase = config.get[String]("uploads.baseUrl")
+  private val apiBase = {
+    var url = config.get[String]("uploads.baseUrl")
+    while (url.endsWith("/")) url = url.dropRight(1)
+    url
+  }
 
   private val token = new TokenHolder
 
 
   private def withToken[T](endpoint: String)(exec: WSRequest => Future[WSResponse])(map: JsValue => T): Future[Either[APIResponse, T]] =
     token()
-      .map(token => ws.url(s"$apiBase/$endpoint").addHttpHeaders("Authorization" -> ("Bearer " + token)))
+      .map(token => ws.url(s"$apiBase/${endpoint.dropWhile(_ == '/')}").addHttpHeaders("Authorization" -> ("Bearer " + token)))
       .flatMap(r => mapping(r)(exec)(map))
 
   private def mapping[T](request: WSRequest)(exec: WSRequest => Future[WSResponse])(map: JsValue => T): Future[Either[APIResponse, T]] =

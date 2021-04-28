@@ -1,7 +1,7 @@
 import sbt.Keys.{libraryDependencies, resolvers}
 
 ThisBuild / organization := "ch.japanimpact"
-ThisBuild / version      := "1.0"
+ThisBuild / version      := "1.1"
 ThisBuild / scalaVersion := "2.13.1"
 ThisBuild / libraryDependencies ++= Seq(
   "com.typesafe.play" %% "play-json" % "2.8.1",
