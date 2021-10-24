@@ -1,3 +1,4 @@
+import com.typesafe.sbt.packager.docker.{Cmd, ExecCmd}
 import sbt.Keys.{libraryDependencies, resolvers}
 
 ThisBuild / organization := "ch.japanimpact"
@@ -28,6 +29,7 @@ lazy val root = (project in file("."))
   .enablePlugins(PlayScala, JDebPackaging, SystemdPlugin, JavaServerAppPackaging, DockerPlugin)
   .settings(
     name := "ji-uploads",
+    version := "1.1-b",
     libraryDependencies ++= Seq(jdbc, evolutions, ehcache, ws, specs2 % Test, guice),
 
     maintainer in Linux := "Louis Vialar <louis.vialar@japan-impact.ch>",
@@ -60,6 +62,17 @@ lazy val root = (project in file("."))
     ),
 
     dockerExposedPorts in Docker := Seq(80),
+    dockerUsername := Some("polyjapan"),
+    // Install the required "file" package
+    dockerCommands := dockerCommands.value.flatMap {
+      case c @ Cmd("USER", "root") =>
+        Seq(c,
+          ExecCmd("RUN", "apt", "update"),
+          ExecCmd("RUN", "apt", "install", "-y", "file")
+        )
+
+      case other => Seq(other)
+    }
   )
   .aggregate(api)
   .dependsOn(api)
