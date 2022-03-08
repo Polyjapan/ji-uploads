@@ -117,7 +117,7 @@ class HttpUploadsService @Inject()(ws: WSClient, config: Configuration, tokens: 
      * @return
      */
     override def update(container: Container): Future[APIResponse] = {
-      withToken(s"/containers/$app/$container")(_.put(Json.toJson(container)))(_.as[APIResponse])
+      withToken(s"/containers/$app/${container.containerName}")(_.put(Json.toJson(container)))(_.as[APIResponse])
         .map { case Left(r) => r case Right(r) => r }
         .map { r =>
           if (r.success && container.containerName != this.container)
