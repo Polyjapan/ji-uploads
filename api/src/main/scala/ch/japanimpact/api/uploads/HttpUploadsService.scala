@@ -77,7 +77,7 @@ class HttpUploadsService @Inject()(ws: WSClient, config: Configuration, tokens: 
 
   class HttpContainersClient(override val app: Int) extends ContainersClient {
     override def createContainer(container: Container): Future[Either[APIResponse, ContainerClient]] = {
-      withToken(s"/containers/$app")(_.post(Json.toJson(container)))(rep => {
+q      withToken(s"containers/$app")(_.post(Json.toJson(container)))(rep => {
         if (rep.as[APIResponse].success) new HttpContainerClient(app, container.containerName)
         else throw new Exception()
       })
@@ -88,7 +88,7 @@ class HttpUploadsService @Inject()(ws: WSClient, config: Configuration, tokens: 
     override def / (containerName: String): ContainerClient = apply(containerName)
 
     override def getContainers: Future[Either[APIResponse, Seq[Container]]] =
-      withToken(s"/containers/$app")(_.get)(_.as[Seq[Container]])
+      withToken(s"containers/$app")(_.get)(_.as[Seq[Container]])
 
     override def getOrCreateContainer(container: Container): Future[Either[APIResponse, ContainerClient]] = {
       val api = apply(container.containerName)
@@ -117,7 +117,7 @@ class HttpUploadsService @Inject()(ws: WSClient, config: Configuration, tokens: 
      * @return
      */
     override def update(container: Container): Future[APIResponse] = {
-      withToken(s"/containers/$app/${container.containerName}")(_.put(Json.toJson(container)))(_.as[APIResponse])
+      withToken(s"containers/$app/${container.containerName}")(_.put(Json.toJson(container)))(_.as[APIResponse])
         .map { case Left(r) => r case Right(r) => r }
         .map { r =>
           if (r.success && container.containerName != this.container)
@@ -127,27 +127,27 @@ class HttpUploadsService @Inject()(ws: WSClient, config: Configuration, tokens: 
     }
 
     override def get: Future[Either[APIResponse, Container]] =
-      withToken(s"/containers/$app/$container")(_.get)(_.as[Container])
+      withToken(s"containers/$app/$container")(_.get)(_.as[Container])
 
     override def delete: Future[APIResponse] =
-      withToken(s"/containers/$app/$container")(_.delete())(_.as[APIResponse])
+      withToken(s"containers/$app/$container")(_.delete())(_.as[APIResponse])
         .map { case Left(r) => r case Right(r) => r }
 
     override def startUpload(request: UploadRequest): Future[Either[APIResponse, UploadRequestClient]] =
-      withToken(s"/files/$app/$container")(_.post(Json.toJson(request))) {
+      withToken(s"files/$app/$container")(_.post(Json.toJson(request))) {
         rep => HttpUploadRequest(rep.as[APIResponse].data.get.as[String])
       }
 
     override def listFiles: Future[Either[APIResponse, Seq[Upload]]] =
-      withToken(s"/files/$app/$container")(_.get)(_.as[Seq[Upload]])
+      withToken(s"files/$app/$container")(_.get)(_.as[Seq[Upload]])
 
     override def listFilesBy(principal: Option[Principal]): Future[Either[APIResponse, Seq[Upload]]] =
-      withToken(s"/files/$app/$container/${principal.map(_.toSubject).getOrElse("anon")}")(_.get)(_.as[Seq[Upload]])
+      withToken(s"files/$app/$container/${principal.map(_.toSubject).getOrElse("anon")}")(_.get)(_.as[Seq[Upload]])
   }
 
   case class HttpUploadRequest(ticket: String) extends UploadRequestClient {
     override def status: Future[Either[APIResponse, UploadStatusResponse]] =
-      withToken(s"/uploadRequests/$ticket")(_.get)(_.as[APIResponse].data.get.as[UploadStatusResponse])
+      withToken(s"uploadRequests/$ticket")(_.get)(_.as[APIResponse].data.get.as[UploadStatusResponse])
 
     override def url: String = s"$apiBase/files/$ticket"
   }
@@ -157,7 +157,7 @@ class HttpUploadsService @Inject()(ws: WSClient, config: Configuration, tokens: 
   override def uploadRequest(ticket: String): UploadRequestClient = HttpUploadRequest(ticket)
 
   override def delegate(req: DelegationRequest): Future[Either[APIResponse, String]] = {
-    withToken(s"/delegation")(_.post(Json.toJson(req)))(_.as[APIResponse].data.get.as[String])
+    withToken(s"delegation")(_.post(Json.toJson(req)))(_.as[APIResponse].data.get.as[String])
   }
 
 }
